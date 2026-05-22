@@ -100,6 +100,3 @@ This system helps companies transition from:
 ➡️ Descriptive Analytics
 ➡️ Predictive Analytics
 ➡️ Prescriptive Analytics
-
-📸 Screenshots (Add Here)
-image
