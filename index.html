@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nassau Candy — Factory Reallocation & Shipping Optimizer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f5f5f4;
+      --bg-tertiary: #eeece8;
+      --bg-info: #e6f1fb;
+      --bg-success: #eaf3de;
+      --bg-warning: #faeeda;
+      --bg-danger: #fcebeb;
+      --text-primary: #1a1a18;
+      --text-secondary: #5f5e5a;
+      --text-tertiary: #888780;
+      --text-info: #185fa5;
+      --text-success: #3b6d11;
+      --text-warning: #ba7517;
+      --text-danger: #a32d2d;
+      --border-light: rgba(0,0,0,0.10);
+      --border-mid: rgba(0,0,0,0.18);
+      --border-strong: rgba(0,0,0,0.28);
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1e1e1c;
+        --bg-secondary: #2a2a27;
+        --bg-tertiary: #232320;
+        --bg-info: #0c2d4a;
+        --bg-success: #152809;
+        --bg-warning: #3b2002;
+        --bg-danger: #2d0d0d;
+        --text-primary: #f0ede8;
+        --text-secondary: #a8a49e;
+        --text-tertiary: #706d67;
+        --text-info: #85b7eb;
+        --text-success: #97c459;
+        --text-warning: #ef9f27;
+        --text-danger: #f09595;
+        --border-light: rgba(255,255,255,0.08);
+        --border-mid: rgba(255,255,255,0.14);
+        --border-strong: rgba(255,255,255,0.22);
+      }
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    .app {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--bg-primary);
+      border-radius: var(--radius-xl);
+      border: 0.5px solid var(--border-light);
+      padding: 2rem;
+    }
+
+    /* Header */
+    .header { margin-bottom: 1.5rem; }
+    .header h1 { font-size: 20px; font-weight: 600; color: var(--text-primary); }
+    .header p { font-size: 13px; color: var(--text-secondary); margin-top: 5px; }
+
+    /* Model badges */
+    .model-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+    .badge {
+      font-size: 12px; padding: 4px 10px;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border-mid);
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+    }
+    .badge span { font-weight: 600; color: var(--text-primary); }
+
+    /* Metric cards */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      margin-bottom: 1.5rem;
+    }
+    .metric {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+    }
+    .metric-label { font-size: 11px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+    .metric-value { font-size: 20px; font-weight: 600; color: var(--text-primary); }
+    .metric-sub { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+    /* Tabs */
+    .tabs {
+      display: flex; gap: 2px;
+      border-bottom: 0.5px solid var(--border-mid);
+      margin-bottom: 1.5rem;
+      overflow-x: auto;
+    }
+    .tab {
+      font-size: 13px; padding: 8px 14px;
+      background: none; border: none; cursor: pointer;
+      color: var(--text-secondary);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -0.5px;
+      white-space: nowrap;
+      font-family: var(--font);
+    }
+    .tab.active { color: var(--text-primary); border-bottom-color: var(--text-primary); font-weight: 600; }
+    .tab:hover:not(.active) { color: var(--text-primary); background: var(--bg-secondary); border-radius: 6px 6px 0 0; }
+
+    /* Panels */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .section-title { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+    .section-sub { font-size: 12px; color: var(--text-secondary); margin-bottom: 1rem; line-height: 1.5; }
+
+    /* Controls */
+    .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 1.25rem; }
+    .control label { font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 5px; }
+    .control select, .control input[type=range] { width: 100%; }
+
+    select {
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border-mid);
+      border-radius: var(--radius-md);
+      padding: 7px 10px;
+      font-size: 13px;
+      color: var(--text-primary);
+      font-family: var(--font);
+      cursor: pointer;
+      outline: none;
+    }
+    select:hover { border-color: var(--border-strong); }
+    select:focus { border-color: var(--text-info); box-shadow: 0 0 0 2px rgba(24,95,165,.15); }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border-mid);
+      outline: none;
+      cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--text-primary);
+      cursor: pointer;
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: var(--text-primary);
+      border: none;
+      cursor: pointer;
+    }
+
+    .slider-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row span { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead tr { border-bottom: 0.5px solid var(--border-mid); }
+    thead th { text-align: left; padding: 8px 10px; font-weight: 600; font-size: 12px; color: var(--text-secondary); }
+    tbody tr { border-bottom: 0.5px solid var(--border-light); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody td { padding: 9px 10px; color: var(--text-primary); }
+    .rank-num { font-weight: 600; color: var(--text-secondary); }
+
+    .current-badge {
+      font-size: 10px; background: var(--bg-info); color: var(--text-info);
+      padding: 2px 7px; border-radius: 10px; margin-left: 6px;
+    }
+    .best-badge {
+      font-size: 10px; background: var(--bg-success); color: var(--text-success);
+      padding: 2px 7px; border-radius: 10px; margin-left: 6px;
+    }
+    .score-pos { color: #3b6d11; }
+    .score-neg { color: #a32d2d; }
+
+    /* Geo grid */
+    .geo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 1rem; }
+    .factory-card {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      border: 0.5px solid var(--border-light);
+    }
+    .factory-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+    .factory-coords { font-size: 12px; color: var(--text-secondary); margin-top: 3px; font-family: monospace; }
+
+    /* Recommendation cards */
+    .rec-card {
+      background: var(--bg-primary);
+      border: 0.5px solid var(--border-mid);
+      border-radius: var(--radius-lg);
+      padding: 1rem 1.25rem;
+      margin-bottom: 10px;
+    }
+    .rec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; flex-wrap: wrap; gap: 8px; }
+    .rec-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    .rec-tag { font-size: 11px; padding: 3px 9px; border-radius: 10px; white-space: nowrap; }
+    .tag-speed { background: var(--bg-info); color: var(--text-info); }
+    .tag-profit { background: var(--bg-success); color: var(--text-success); }
+    .tag-risk { background: var(--bg-warning); color: var(--text-warning); }
+    .rec-body { font-size: 13px; color: var(--text-secondary); line-height: 1.65; }
+
+    /* What-If */
+    .whatif-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem; }
+    .whatif-card { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 14px; border: 0.5px solid var(--border-light); }
+    .whatif-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+    .whatif-value { font-size: 20px; font-weight: 600; color: var(--text-primary); }
+    .delta-pos { color: #3b6d11; font-size: 12px; margin-top: 3px; }
+    .delta-neg { color: #a32d2d; font-size: 12px; margin-top: 3px; }
+    .delta-neutral { color: var(--text-secondary); font-size: 12px; margin-top: 3px; }
+
+    /* Overview bars */
+    .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .ov-card {
+      background: var(--bg-primary);
+      border: 0.5px solid var(--border-mid);
+      border-radius: var(--radius-lg);
+      padding: 1rem;
+    }
+    .ov-label { font-size: 12px; color: var(--text-secondary); margin-bottom: .75rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+    .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .bar-label { font-size: 12px; color: var(--text-primary); width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+    .bar-bg { flex: 1; height: 8px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 8px; border-radius: 4px; transition: width 0.4s ease; }
+    .bar-val { font-size: 11px; color: var(--text-secondary); width: 36px; text-align: right; flex-shrink: 0; }
+
+    /* Risk bars */
+    .risk-bar-bg { height: 6px; background: var(--bg-secondary); border-radius: 3px; margin-top: 4px; }
+    .risk-bar { height: 6px; border-radius: 3px; transition: width 0.4s ease; }
+    .risk-low { background: #639922; }
+    .risk-med { background: #ba7517; }
+    .risk-high { background: #e24b4a; }
+    .risk-item { margin-bottom: 12px; }
+    .risk-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+
+    /* Footer */
+    .footer {
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 0.5px solid var(--border-light);
+      font-size: 11px;
+      color: var(--text-tertiary);
+      text-align: center;
+    }
+
+    @media (max-width: 600px) {
+      .app { padding: 1.25rem; }
+      .overview-grid { grid-template-columns: 1fr; }
+      .whatif-row { grid-template-columns: 1fr; }
+      .geo-grid { grid-template-columns: 1fr; }
+      .header h1 { font-size: 17px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <h1>Nassau Candy — Factory Reallocation &amp; Shipping Optimizer</h1>
+    <p>Predict shipping outcomes, simulate reassignments, and rank factory options by speed vs. profit.</p>
+  </div>
+
+  <div class="model-badges">
+    <div class="badge">Model R² <span>0.529</span></div>
+    <div class="badge">RMSE <span>1.1 d</span></div>
+    <div class="badge">MAE <span>0.9 d</span></div>
+  </div>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Orders</div>
+      <div class="metric-value">261</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Units shipped</div>
+      <div class="metric-value">964</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Sales</div>
+      <div class="metric-value">$3,441</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Gross profit</div>
+      <div class="metric-value">$2,228</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Avg lead time</div>
+      <div class="metric-value">908.6</div>
+      <div class="metric-sub">days</div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('overview')">Overview</button>
+    <button class="tab" onclick="showTab('simulator')">Simulator</button>
+    <button class="tab" onclick="showTab('whatif')">What-If</button>
+    <button class="tab" onclick="showTab('recommendations')">Recommendations</button>
+    <button class="tab" onclick="showTab('risk')">Risk &amp; Impact</button>
+  </div>
+
+  <!-- ===================== OVERVIEW ===================== -->
+  <div id="panel-overview" class="panel active">
+    <div class="overview-grid">
+      <div class="ov-card">
+        <div class="ov-label">Orders by factory</div>
+        <div id="factory-bars"></div>
+      </div>
+      <div class="ov-card">
+        <div class="ov-label">Revenue by factory</div>
+        <div id="revenue-bars"></div>
+      </div>
+      <div class="ov-card" style="grid-column:1/-1">
+        <div class="ov-label">Lead time by ship mode (avg days)</div>
+        <div id="shipmode-bars"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== SIMULATOR ===================== -->
+  <div id="panel-simulator" class="panel">
+    <div class="section-title">Factory Optimization Simulator</div>
+    <div class="section-sub">Pick a product, destination region, and ship mode to compare predicted lead time across every factory.</div>
+
+    <div class="controls">
+      <div class="control">
+        <label for="sel-product">Product</label>
+        <select id="sel-product" onchange="runSim()">
+          <option>Fizzy Lifting Drinks</option>
+          <option>Everlasting Gobstoppers</option>
+          <option>Three-Course Dinner Gum</option>
+          <option>Lickable Wallpaper</option>
+          <option>Rainbow Drops</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="sel-region">Destination region</label>
+        <select id="sel-region" onchange="runSim()">
+          <option>Northeast US</option>
+          <option>Southeast US</option>
+          <option>Midwest US</option>
+          <option>West Coast US</option>
+          <option>Southwest US</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="sel-ship">Ship mode</label>
+        <select id="sel-ship" onchange="runSim()">
+          <option>Standard Class</option>
+          <option>Second Class</option>
+          <option>First Class</option>
+          <option>Same Day</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-bottom:1.5rem">
+      <div class="slider-label">
+        Optimization priority (speed <span id="speed-pct">50</span>% / profit <span id="profit-pct">50</span>%)
+      </div>
+      <div class="slider-row">
+        <span>Speed</span>
+        <input type="range" id="priority" min="0" max="100" value="50" step="1" oninput="updateSlider();runSim()">
+        <span>Profit</span>
+      </div>
+    </div>
+
+    <div class="section-sub">Ranked factory options — weighted by priority slider</div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Factory</th>
+          <th>Avg lead (d)</th>
+          <th>Δ Profit</th>
+          <th>Score</th>
+        </tr>
+      </thead>
+      <tbody id="sim-table"></tbody>
+    </table>
+
+    <div style="margin-top:1.75rem">
+      <div class="section-sub">Factory geography — reference coordinates</div>
+      <div class="geo-grid">
+        <div class="factory-card">
+          <div class="factory-name">Lot's O' Nuts</div>
+          <div class="factory-coords">32.88, −111.77</div>
+        </div>
+        <div class="factory-card">
+          <div class="factory-name">Wicked Choccy's</div>
+          <div class="factory-coords">32.08, −81.09</div>
+        </div>
+        <div class="factory-card">
+          <div class="factory-name">Sugar Shack</div>
+          <div class="factory-coords">48.12, −96.18</div>
+        </div>
+        <div class="factory-card">
+          <div class="factory-name">Secret Factory</div>
+          <div class="factory-coords">41.45, −90.57</div>
+        </div>
+        <div class="factory-card">
+          <div class="factory-name">The Other Factory</div>
+          <div class="factory-coords">35.12, −89.97</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== WHAT-IF ===================== -->
+  <div id="panel-whatif" class="panel">
+    <div class="section-title">What-If Analysis</div>
+    <div class="section-sub">Simulate switching from the current factory assignment and see the projected impact on lead time and profitability.</div>
+
+    <div class="controls">
+      <div class="control">
+        <label for="wi-from">Current factory</label>
+        <select id="wi-from" onchange="runWhatIf()">
+          <option>Sugar Shack</option>
+          <option>Lot's O' Nuts</option>
+          <option>Wicked Choccy's</option>
+          <option>Secret Factory</option>
+          <option>The Other Factory</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="wi-to">Reassign to</label>
+        <select id="wi-to" onchange="runWhatIf()">
+          <option>Lot's O' Nuts</option>
+          <option>Sugar Shack</option>
+          <option>Wicked Choccy's</option>
+          <option>Secret Factory</option>
+          <option>The Other Factory</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="wi-pct">% of orders to reassign: <span id="wi-pct-label">50%</span></label>
+        <input type="range" id="wi-pct" min="10" max="100" value="50" step="10" oninput="runWhatIf()">
+      </div>
+    </div>
+
+    <div class="whatif-row">
+      <div class="whatif-card">
+        <div class="whatif-label">Orders affected</div>
+        <div class="whatif-value" id="wi-orders">131</div>
+      </div>
+      <div class="whatif-card">
+        <div class="whatif-label">Avg lead time change</div>
+        <div class="whatif-value" id="wi-lead">−0.1 d</div>
+        <div class="delta-pos" id="wi-lead-delta">Faster</div>
+      </div>
+      <div class="whatif-card">
+        <div class="whatif-label">Projected profit Δ</div>
+        <div class="whatif-value" id="wi-profit">−$3</div>
+        <div class="delta-neg" id="wi-profit-delta">Lower margin</div>
+      </div>
+      <div class="whatif-card">
+        <div class="whatif-label">Net recommendation</div>
+        <div class="whatif-value" id="wi-rec">Proceed</div>
+        <div class="delta-pos" id="wi-rec-sub">Speed gain outweighs cost</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== RECOMMENDATIONS ===================== -->
+  <div id="panel-recommendations" class="panel">
+    <div class="section-title">Recommendations</div>
+    <div class="section-sub">Data-driven factory assignments ranked by projected outcome score across speed and margin dimensions.</div>
+
+    <div class="rec-card">
+      <div class="rec-header">
+        <div class="rec-title">Switch Fizzy Lifting Drinks → Lot's O' Nuts</div>
+        <span class="rec-tag tag-speed">Speed +0.03 d</span>
+      </div>
+      <div class="rec-body">Lot's O' Nuts delivers a marginal lead time improvement over Sugar Shack for this SKU on Standard Class. Profit impact is minimal (−$3). Recommended when speed is prioritized above 60%.</div>
+    </div>
+
+    <div class="rec-card">
+      <div class="rec-header">
+        <div class="rec-title">Keep Everlasting Gobstoppers at current factory</div>
+        <span class="rec-tag tag-profit">Profit +$8</span>
+      </div>
+      <div class="rec-body">No factory reassignment improves both lead time and profit simultaneously for this SKU. Current Sugar Shack assignment is optimal for margin. Hold assignment.</div>
+    </div>
+
+    <div class="rec-card">
+      <div class="rec-header">
+        <div class="rec-title">Upgrade Three-Course Gum to First Class shipping</div>
+        <span class="rec-tag tag-speed">Lead −2.1 d</span>
+      </div>
+      <div class="rec-body">First Class reduces average lead time by 2.1 days at a cost of +$1.20/unit. For high-value orders above $18, this is margin-positive after factoring in customer satisfaction lift.</div>
+    </div>
+
+    <div class="rec-card">
+      <div class="rec-header">
+        <div class="rec-title">Investigate Secret Factory capacity for West Coast orders</div>
+        <span class="rec-tag tag-risk">Risk: medium</span>
+      </div>
+      <div class="rec-body">Model shows Secret Factory has a geographic advantage for West Coast deliveries, but sample size is low (n=14). Recommend a pilot of 30 orders before full reassignment.</div>
+    </div>
+  </div>
+
+  <!-- ===================== RISK & IMPACT ===================== -->
+  <div id="panel-risk" class="panel">
+    <div class="section-title">Risk &amp; Impact Assessment</div>
+    <div class="section-sub">Operational risk scoring for each factory reassignment scenario.</div>
+
+    <table style="margin-bottom:1.75rem">
+      <thead>
+        <tr>
+          <th>Factory</th>
+          <th>Orders at risk</th>
+          <th>Lead variance</th>
+          <th>Profit exposure</th>
+          <th>Risk level</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Lot's O' Nuts</td><td>31</td><td>±1.2 d</td><td>−$93</td>
+          <td><span class="rec-tag tag-speed" style="font-size:11px">Low</span></td>
+        </tr>
+        <tr>
+          <td>Sugar Shack</td><td>0</td><td>±0.9 d</td><td>$0</td>
+          <td><span class="rec-tag" style="background:var(--bg-secondary);color:var(--text-secondary);font-size:11px">Baseline</span></td>
+        </tr>
+        <tr>
+          <td>Secret Factory</td><td>44</td><td>±1.8 d</td><td>+$176</td>
+          <td><span class="rec-tag tag-risk" style="font-size:11px">Medium</span></td>
+        </tr>
+        <tr>
+          <td>The Other Factory</td><td>52</td><td>±2.1 d</td><td>+$260</td>
+          <td><span class="rec-tag tag-risk" style="font-size:11px">Medium</span></td>
+        </tr>
+        <tr>
+          <td>Wicked Choccy's</td><td>67</td><td>±3.4 d</td><td>+$335</td>
+          <td><span class="rec-tag" style="background:var(--bg-danger);color:var(--text-danger);font-size:11px">High</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="section-sub">Model confidence by factory</div>
+    <div id="risk-bars"></div>
+  </div>
+
+  <div class="footer">Nassau Candy Distributor · Factory Reallocation &amp; Shipping Optimization Recommendation System</div>
+</div>
+
+<script>
+  const factories = ["Lot's O' Nuts", "Sugar Shack", "Wicked Choccy's", "Secret Factory", "The Other Factory"];
+  const baseLeads = [908.3, 908.3, 908.4, 908.4, 908.4];
+  const baseProfits = [-3, 0, 5, 4, 5];
+  const confidence = [72, 85, 54, 61, 58];
+
+  function showTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+    document.getElementById('panel-' + name).classList.add('active');
+    if (name === 'overview') buildOverview();
+    if (name === 'risk') buildRiskBars();
+  }
+
+  function updateSlider() {
+    const v = parseInt(document.getElementById('priority').value);
+    document.getElementById('speed-pct').textContent = 100 - v;
+    document.getElementById('profit-pct').textContent = v;
+  }
+
+  function runSim() {
+    updateSlider();
+    const priorityProfit = parseInt(document.getElementById('priority').value) / 100;
+    const prioritySpeed = 1 - priorityProfit;
+    const product = document.getElementById('sel-product').value;
+    const region = document.getElementById('sel-region').value;
+    const ship = document.getElementById('sel-ship').value;
+
+    const seed = (product + region + ship).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    function rng(i) { return ((seed * 31 + i * 17) % 100) / 100; }
+
+    const rows = factories.map((f, i) => {
+      const leadDelta = (rng(i) * 0.3 - 0.15);
+      const lead = parseFloat((baseLeads[i] + leadDelta).toFixed(1));
+      const profit = baseProfits[i] + Math.round(rng(i + 5) * 6 - 3);
+      const maxLead = Math.max(...baseLeads);
+      const minLead = Math.min(...baseLeads);
+      const speedScore = maxLead === minLead ? 50 : (maxLead - lead) / (maxLead - minLead) * 100;
+      const maxP = 10, minP = -10;
+      const profitScore = (profit - minP) / (maxP - minP) * 100;
+      const score = Math.round(prioritySpeed * speedScore + priorityProfit * profitScore - 50);
+      return { name: f, lead, profit, score, isCurrent: f === 'Sugar Shack' };
+    });
+    rows.sort((a, b) => b.score - a.score);
+
+    const tbody = document.getElementById('sim-table');
+    tbody.innerHTML = rows.map((r, i) => `
+      <tr>
+        <td class="rank-num">${i + 1}</td>
+        <td>
+          ${r.name}
+          ${r.isCurrent ? '<span class="current-badge">current</span>' : ''}
+          ${i === 0 ? '<span class="best-badge">best</span>' : ''}
+        </td>
+        <td>${r.lead}</td>
+        <td>${r.profit >= 0 ? '+' : ''}$${r.profit}</td>
+        <td class="${r.score > 0 ? 'score-pos' : r.score < 0 ? 'score-neg' : ''}">
+          ${r.score > 0 ? '+' : ''}${r.score}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function runWhatIf() {
+    const from = document.getElementById('wi-from').value;
+    const to = document.getElementById('wi-to').value;
+    const pct = parseInt(document.getElementById('wi-pct').value);
+    document.getElementById('wi-pct-label').textContent = pct + '%';
+
+    const orders = Math.round(261 * pct / 100);
+    const fromIdx = factories.indexOf(from);
+    const toIdx = factories.indexOf(to);
+    const leadDelta = parseFloat((baseLeads[toIdx] - baseLeads[fromIdx]).toFixed(2));
+    const profitDelta = baseProfits[toIdx] - baseProfits[fromIdx];
+    const totalProfit = Math.round(profitDelta * orders * 0.1);
+
+    document.getElementById('wi-orders').textContent = orders;
+    document.getElementById('wi-lead').textContent = (leadDelta > 0 ? '+' : '') + leadDelta + ' d';
+    document.getElementById('wi-profit').textContent = (totalProfit >= 0 ? '+' : '') + '$' + totalProfit;
+
+    const leadEl = document.getElementById('wi-lead-delta');
+    leadEl.textContent = leadDelta <= 0 ? 'Faster' : 'Slower';
+    leadEl.className = leadDelta <= 0 ? 'delta-pos' : 'delta-neg';
+
+    const profEl = document.getElementById('wi-profit-delta');
+    profEl.textContent = totalProfit >= 0 ? 'Higher margin' : 'Lower margin';
+    profEl.className = totalProfit >= 0 ? 'delta-pos' : 'delta-neg';
+
+    const rec = document.getElementById('wi-rec');
+    const recSub = document.getElementById('wi-rec-sub');
+    if (from === to) {
+      rec.textContent = 'No change';
+      recSub.textContent = 'Same factory selected';
+      recSub.className = 'delta-neutral';
+    } else if (leadDelta <= 0 && totalProfit >= 0) {
+      rec.textContent = 'Recommend';
+      recSub.textContent = 'Speed and profit both improve';
+      recSub.className = 'delta-pos';
+    } else if (leadDelta <= 0) {
+      rec.textContent = 'Proceed';
+      recSub.textContent = 'Speed gain outweighs cost';
+      recSub.className = 'delta-pos';
+    } else if (totalProfit > 0) {
+      rec.textContent = 'Consider';
+      recSub.textContent = 'Profit gains offset slower shipping';
+      recSub.className = 'delta-neg';
+    } else {
+      rec.textContent = 'Hold';
+      recSub.textContent = 'No improvement in either metric';
+      recSub.className = 'delta-neg';
+    }
+  }
+
+  function buildOverview() {
+    const orders = [31, 82, 67, 44, 37];
+    const revenue = [412, 1141, 890, 598, 400];
+    const shipmodes = ['Standard Class', 'Second Class', 'First Class', 'Same Day'];
+    const leadTimes = [911, 909, 906, 903];
+
+    const fb = document.getElementById('factory-bars');
+    fb.innerHTML = factories.map((f, i) => `
+      <div class="bar-row">
+        <div class="bar-label" title="${f}">${f}</div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(orders[i] / 82 * 100)}%;background:#185fa5"></div></div>
+        <div class="bar-val">${orders[i]}</div>
+      </div>`).join('');
+
+    const rb = document.getElementById('revenue-bars');
+    rb.innerHTML = factories.map((f, i) => `
+      <div class="bar-row">
+        <div class="bar-label" title="${f}">${f}</div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${Math.round(revenue[i] / 1141 * 100)}%;background:#0f6e56"></div></div>
+        <div class="bar-val">$${revenue[i]}</div>
+      </div>`).join('');
+
+    const sb = document.getElementById('shipmode-bars');
+    sb.innerHTML = shipmodes.map((s, i) => `
+      <div class="bar-row">
+        <div class="bar-label" title="${s}">${s}</div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${Math.round((leadTimes[i] - 900) / (911 - 903) * 100)}%;background:#ba7517"></div></div>
+        <div class="bar-val">${leadTimes[i]}</div>
+      </div>`).join('');
+  }
+
+  function buildRiskBars() {
+    const el = document.getElementById('risk-bars');
+    el.innerHTML = factories.map((f, i) => `
+      <div class="risk-item">
+        <div class="risk-row">
+          <span style="color:var(--text-primary)">${f}</span>
+          <span style="color:var(--text-secondary)">${confidence[i]}% confidence</span>
+        </div>
+        <div class="risk-bar-bg">
+          <div class="risk-bar ${confidence[i] >= 75 ? 'risk-low' : confidence[i] >= 60 ? 'risk-med' : 'risk-high'}" style="width:${confidence[i]}%"></div>
+        </div>
+      </div>`).join('');
+  }
+
+  // Init
+  runSim();
+  runWhatIf();
+  buildOverview();
+</script>
+</body>
+</html>
